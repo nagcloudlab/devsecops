@@ -37,6 +37,40 @@ pipeline{
             }
         }
 
+        // stage('Deploy to Production') {
+        //     steps {
+        //         dir('transfer-service') {
+        //             input message: 'Deploy to Production?', ok: 'Deploy'
+        //             // scp command to copy the jar file to the production server
+        //             sh 'scp target/transfer-service-1.0-SNAPSHOT.jar user@production-server:/path/to/deploy/'
+        //             // ssh command to restart the service on the production server
+        //             sh 'ssh user@production-server "systemctl restart transfer-service"'
+        //         }
+        //     }
+        // }
+
+         stage('Build Docker Image') {
+            steps {
+                script {
+                    def imageName = "docker.io/nagabhushanamn/transfer-service"
+                    def imageTag = "v${env.BUILD_ID}"
+                    def fullImage = "${imageName}:${imageTag}"
+                    dir('transfer-service') {
+                        sh "docker build -t ${fullImage} ."
+                    }
+                    env.IMAGE_NAME = imageName
+                    env.IMAGE_TAG = imageTag
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                // withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    // sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin"
+                    sh "docker push ${env.IMAGE_NAME}:${env.IMAGE_TAG}"
+                // }
+            }
+        }
 
     }
 }
