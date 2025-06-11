@@ -1,0 +1,141 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'JAVA_VERSION', choices: ['17', '21'], description: 'Java version to test with')
+    }
+
+    // environment {
+    //     MAVEN_OPTS = "-Dmaven.repo.local=.m2/repository"
+    // }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/nagcloudlab/dev-sec-ops.git', branch: 'main'
+            }
+        }
+
+        // stage('Cache Maven Repo') {
+        //     steps {
+        //         sh 'mkdir -p .m2/repository'
+        //     }
+        // }
+
+        stage('Build') {
+            steps {
+                dir('account-service') {
+                sh 'mvn clean compile'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('account-service') {
+                    sh "mvn test"
+                }
+            }
+        }
+
+        stage('SonarQube Scan') {
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    dir('account-service') {
+                        sh '''
+                            mvn sonar:sonar \
+                              -Dsonar.projectKey=account-service \
+                              -Dsonar.host.url=http://20.204.162.36:9000/ \
+                              -Dsonar.login=$SONAR_TOKEN
+                        '''
+                    }
+                }
+            }
+        }
+
+
+
+        //  stage('Dependency Vulnerability Scan') {
+        //     steps {
+        //         dir('account-service') {
+        //             sh 'mvn org.owasp:dependency-check-maven:check'
+        //         }
+        //     }
+        // }
+
+
+        stage('Package') {
+            steps {
+                dir('account-service') {
+                    sh "mvn package -DskipTests"
+                }
+            }
+        }
+
+        stage('Archive Artifact') {
+            steps {
+                dir('account-service') {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                input message: 'Deploy to Nexus Repository?', ok: 'Deploy'
+                
+                withCredentials([file(credentialsId: 'nexus-repo-credentials', variable: 'SETTINGS_XML')]) {
+                    dir('account-service') {
+                        sh 'mvn deploy -DskipTests -s $SETTINGS_XML'
+                    }
+                }
+            }
+        }
+
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def imageName = "docker.io/nagabhushanamn/account-service"
+                    def imageTag = "v${env.BUILD_ID}"
+                    def fullImage = "${imageName}:${imageTag}"
+
+                    dir('account-service') {
+                        sh "docker build -t ${fullImage} ."
+                        sh "docker tag ${fullImage} ${imageName}:latest"
+                        // Optional: Push to local or remote registry
+                        sh "docker push ${imageName}:latest"
+                    }
+
+                    // Save image name for next steps
+                    //env.IMAGE_NAME = imageName
+                    //env.IMAGE_TAG = imageTag
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // def imageName = "docker.io/nagabhushanamn/account-service"
+                    // def imageTag = "v${env.BUILD_ID}"
+                    // def fullImage = "${imageName}:${imageTag}"
+
+                    dir('account-service/k8s') {
+                        // sh "sed -i 's|<IMAGE_NAME>|${fullImage}|g' deployment.yaml"
+                        sh "kubectl apply -f deployment.yaml"
+                        sh "kubectl apply -f service.yaml"
+                    }
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            junit '**/target/surefire-reports/*.xml'
+            cleanWs()
+        }
+    }
+}
