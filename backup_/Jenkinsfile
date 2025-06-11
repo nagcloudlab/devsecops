@@ -10,7 +10,7 @@ pipeline {
     // }
 
     stages {
-        
+
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/nagcloudlab/dev-sec-ops.git', branch: 'main'
@@ -140,3 +140,13 @@ pipeline {
         }
     }
 }
+
+
+stage('Deploy to K8s') {
+            steps {
+                sh '''
+                sed "s|\\${IMAGE_TAG}|${IMAGE_TAG}|g" k8s/account-deployment.yaml > k8s/account-deployment-rendered.yaml
+                kubectl apply -f k8s/account-deployment-rendered.yaml
+                '''
+            }
+        }
