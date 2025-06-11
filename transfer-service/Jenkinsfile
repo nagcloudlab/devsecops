@@ -3,7 +3,7 @@ pipeline{
     stages{
          stage('Checkout') {
             steps {
-                git url: 'https://github.com/nagcloudlab/dev-sec-ops.git', branch: 'main'
+                git url: 'https://github.com/nagcloudlab/devsecops.git', branch: 'main'
             }
         }
         stage('Build') {
