@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: account-deployment
+  name: transfer-deployment
 spec:
   replicas: 5
   selector:
     matchLabels:
-      app: account-service
+      app: transfer-service
   template:
     metadata:
       labels:
-        app: account-service
+        app: transfer-service
     spec:
       containers:
-        - name: account-service
-          image: docker.io/nagabhushanamn/account-service:{{IMAGE_TAG}}
+        - name: transfer-service
+          image: docker.io/nagabhushanamn/transfer-service:{{IMAGE_TAG}}
           
