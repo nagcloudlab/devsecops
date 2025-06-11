@@ -20,6 +20,15 @@ pipeline{
                 }
             }
         }
+
+        stage('Static Code Analysis') {
+            steps {
+                dir('transfer-service') {
+                    sh "mvn sonar:sonar -Dsonar.projectKey=transfer-service -Dsonar.host.url=http://74.225.227.202/:9000 -Dsonar.login=sqa_db6b317cf6c12d0762c36a5b7da965bb8989ef1e"
+                }
+            }
+        }
+
         stage('Package') {
             steps {
                 dir('transfer-service') {
