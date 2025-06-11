@@ -1,0 +1,9 @@
+<settings>
+  <servers>
+    <server>
+      <id>nexus</id>
+      <username>admin</username>
+      <password>admin@NPCI1212</password>
+    </server>
+  </servers>
+</settings>

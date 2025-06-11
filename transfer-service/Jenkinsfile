@@ -1,11 +1,43 @@
 pipeline{
     agent any
     stages{
-        stage("A"){
-            steps{
-                echo "========executing A========"
+         stage('Checkout') {
+            steps {
+                git url: 'https://github.com/nagcloudlab/dev-sec-ops.git', branch: 'main'
             }
-        }   
+        }
+        stage('Build') {
+            steps {
+                dir('transfer-service') {
+                    sh 'mvn clean compile'
+                }
+            }
+        }
+        stage('Test') {
+            steps {
+                dir('account-service') {
+                    sh "mvn test"
+                }
+            }
+        }
+        stage('Package') {
+            steps {
+                dir('account-service') {
+                    sh "mvn package -DskipTests"
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+               withCredentials([file(credentialsId: 'nexus-credentials', variable: 'SETTINGS_XML')]) {
+                    dir('account-service') {
+                        sh 'mvn deploy -DskipTests -s $SETTINGS_XML'
+                    }
+                }
+            }
+        }
+
+
     }
 }
     
